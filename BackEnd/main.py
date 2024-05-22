@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from database import SessionLocal, engine
 import models
 from fastapi.middleware.cors import CORSMiddleware
+import hashlib 
 
 app= FastAPI()
 
