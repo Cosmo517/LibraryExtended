@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, status
-from typing import Annotated , List
+from typing import Annotated, List
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from database import SessionLocal, engine
@@ -70,15 +70,38 @@ db_dependency = Annotated[Session, Depends(get_db)]
 
 models.Base.metadata.create_all(bind=engine)
 
+
+
+# * Helper functions for endpoints
+def hash_password(password: str):
+    """Hashes a given password using SHA256
+
+    Args:
+        password (str): The password or string to hash
+
+    Returns:
+        str: The hashed version of the password.
+    """
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def user_exists(username: str, db: db_dependency):
+    return db.query(models.User).filter(models.User.username == username).first()
+
+# * Below are endpoints related to users, such as signing in, registration,
+# * password changes, etc.
 @app.post("/users/", status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserBase, db: db_dependency):
-    db_user = models.User(**user.dict())
-    db.add(db_user)
-    db.commit()
+    db_user = user.model_dump()
+    if not user_exists(db_user['username'], db):
+        db_user['password'] = hash_password(db_user['password'])
+        db.add(models.User(**db_user))
+        db.commit()
+    else:
+        raise HTTPException(status_code=404, detail='User already exists')
 
-@app.get("/user/{user_id}" , status_code=status.HTTP_200_OK)
-async def read_user(user_id: int, db:db_dependency):
-    user = db.query(models.User).filter(models.User.id==user_id).first()
+@app.get("/user/{username}" , status_code=status.HTTP_200_OK)
+async def read_user(username: str, db:db_dependency):
+    user = db.query(models.User).filter(models.User.username == username).first()
     if user is None:
-        raise HTTPException(status_code=404, detail= 'User Not Found')
+        raise HTTPException(status_code=404, detail='User Not Found')
     return user
