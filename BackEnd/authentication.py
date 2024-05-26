@@ -33,7 +33,7 @@ def sign_jwt(username: str, administrator: int):
         'expire': (time.time() - (60 * 60))
     }
     token = jwt.encode(payload, JWT_secret, algorithm=JWT_algorithm)
-    return token
+    return token_response(token)
 
 def decode_jwt(token: str):
     """Decodes the JWT token and returns the decoded information if the

@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from database import SessionLocal, engine
 import models
 from fastapi.middleware.cors import CORSMiddleware
-import hashlib 
+import hashlib
+from authentication import *
 
 app= FastAPI()
 
@@ -57,6 +58,9 @@ class RatingBase(BaseModel):
     username: str
     rating: int
 
+class LoginBase(BaseModel):
+    username: str
+    password: str
 
 # No matter what this will always close our database since we dont want to keep our databases open for too long
 def get_db():
@@ -84,11 +88,26 @@ def hash_password(password: str):
     """
     return hashlib.sha256(password.encode()).hexdigest()
 
+def compare_passwords(login_password: str, database_password: str):
+    """This function compares the password the user entered to login,
+    with the password that is in the database.
+
+    Args:
+        login_password (str): The password the user entered to login
+        database_password (str): The password from the database
+
+    Returns:
+        bool: True if the passwords match, or false if they don't 
+    """
+    return hashlib.sha256(login_password.encode()).hexdigest() == database_password
+
 def user_exists(username: str, db: db_dependency):
     return db.query(models.User).filter(models.User.username == username).first()
 
 # * Below are endpoints related to users, such as signing in, registration,
 # * password changes, etc.
+
+# Create user account
 @app.post("/users/", status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserBase, db: db_dependency):
     db_user = user.model_dump()
@@ -97,11 +116,27 @@ async def create_user(user: UserBase, db: db_dependency):
         db.add(models.User(**db_user))
         db.commit()
     else:
-        raise HTTPException(status_code=404, detail='User already exists')
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User already exists')
 
+# Get information about a user
 @app.get("/user/{username}" , status_code=status.HTTP_200_OK)
 async def read_user(username: str, db:db_dependency):
     user = db.query(models.User).filter(models.User.username == username).first()
     if user is None:
-        raise HTTPException(status_code=404, detail='User Not Found')
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
     return user
+
+# Allow user to sign in
+@app.get("/users/login/", status_code=status.HTTP_200_OK)
+async def login(user: LoginBase, db: db_dependency):
+    db_user = user.model_dump()
+    db_user_search = db.query(models.User).filter(models.User.username == db_user['username']).first()
+    if db_user_search:
+        if compare_passwords(db_user['password'], db_user_search['password']):
+            return sign_jwt(db_user['username'], db_user_search['admin'])
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Username or password is incorrect')
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Username or password is incorrect')
+    
+    
