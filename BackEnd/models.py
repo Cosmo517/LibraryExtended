@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, Boolean, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from database import Base
 
 # Creating users table

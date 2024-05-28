@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, status
-from typing import Annotated, List
+from typing import Annotated
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from database import SessionLocal, engine
@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import hashlib
 from authentication import *
 
-app= FastAPI()
+app = FastAPI()
 
 origins = [
     'http://localhost:3000'
@@ -19,6 +19,8 @@ app.add_middleware(
     allow_origins = origins,
 )
 
+# This is the data that the frontend should pass when a user
+# creates an account
 class UserBase(BaseModel):
     username: str
     email: str
@@ -26,6 +28,8 @@ class UserBase(BaseModel):
     admin: int
     date_created: float 
 
+# This is the data that the frontend should pass when
+# a book is being added to the database
 class BooksBase(BaseModel):
     isbn: str
     title: str
@@ -35,29 +39,35 @@ class BooksBase(BaseModel):
     year_published: int
     genre: str
 
+# Unused at the moment
 class Reading_ListBase(BaseModel):
     index: int
     isbn: str
     username: str
     folder: str
 
+# Unused at the moment
 class Book_to_ListBase(BaseModel):
     list_index: int
     isbn: str
 
+# This is the data that the frontend needs to pass
+# when a user creates a comment
 class CommentsBase(BaseModel):
-    id: int
     book_isbn: str
     username: str
     content: str
     time_stamp: float
 
+# This is the data that the frontend needs to pass
+# when a user leaves a rating
 class RatingBase(BaseModel):
-    id: int
     book_isbn: str
     username: str
     rating: int
 
+# This is the data that the frontend needs to pass
+# when a user tries to login
 class LoginBase(BaseModel):
     username: str
     password: str
@@ -76,7 +86,7 @@ models.Base.metadata.create_all(bind=engine)
 
 
 
-# * Helper functions for endpoints
+# * -- Helper functions for endpoints -- * #
 def hash_password(password: str):
     """Hashes a given password using SHA256
 
@@ -87,6 +97,7 @@ def hash_password(password: str):
         str: The hashed version of the password.
     """
     return hashlib.sha256(password.encode()).hexdigest()
+
 
 def compare_passwords(login_password: str, database_password: str):
     """This function compares the password the user entered to login,
@@ -101,11 +112,14 @@ def compare_passwords(login_password: str, database_password: str):
     """
     return hashlib.sha256(login_password.encode()).hexdigest() == database_password
 
+# A simple boolean to check if a user exists or not.
 def user_exists(username: str, db: db_dependency):
     return db.query(models.User).filter(models.User.username == username).first()
 
-# * Below are endpoints related to users, such as signing in, registration,
-# * password changes, etc.
+
+# * -- Below are endpoints related to users, such as signing in, registration,      -- * #
+# * -- password changes, etc.                                                       -- * #
+
 
 # Create user account
 @app.post("/users/", status_code=status.HTTP_201_CREATED)
@@ -116,7 +130,8 @@ async def create_user(user: UserBase, db: db_dependency):
         db.add(models.User(**db_user))
         db.commit()
     else:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User already exists')
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='User already exists')
+
 
 # Get information about a user
 @app.get("/user/{username}" , status_code=status.HTTP_200_OK)
@@ -126,6 +141,7 @@ async def read_user(username: str, db:db_dependency):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
     return user
 
+
 # Allow user to sign in
 @app.get("/users/login/", status_code=status.HTTP_200_OK)
 async def login(user: LoginBase, db: db_dependency):
@@ -134,9 +150,52 @@ async def login(user: LoginBase, db: db_dependency):
     if db_user_search:
         if compare_passwords(db_user['password'], db_user_search['password']):
             return sign_jwt(db_user['username'], db_user_search['admin'])
-        else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Username or password is incorrect')
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Username or password is incorrect')
+
+
+# *  -- Below are endpoints dealing with books -- * #
+
+
+@app.post("/book/", status_code=status.HTTP_200_OK)
+async def create_book(book: BooksBase, db: db_dependency):
+    book_dump = book.model_dump()
+    db_check_book = db.query(models.Books).filter(models.Books.isbn == book_dump['isbn']).first()
+    if not db_check_book:
+        db.add(models.Books(**book_dump))
+        db.commit()
     else:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Username or password is incorrect')
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Book already exists')
+
+
+@app.get("/books/", status_code=status.HTTP_200_OK)
+async def get_books(skip: int, limit: int, db: db_dependency):
+    books = db.query(models.Books).order_by(models.Books.title).offset(skip).limit(limit).all()
+    return books
+
+
+@app.get('/book/{book_isbn}', status_code=status.HTTP_200_OK)
+async def get_book(book_isbn: str, db: db_dependency):
+    book = db.query(models.Books).filter(models.Books.isbn == book_isbn).first()
+    return book
+
+
+@app.delete('/book/{book_isbn}', status_code=status.HTTP_200_OK)
+async def remove_book(book_isbn: str, db: db_dependency):
+    db_check_book = db.query(models.Books).filter(models.Books.isbn == book_isbn)
+    if db_check_book:
+        db_check_book = db.query(models.Books).filter(models.Books.isbn == book_isbn).delete()
+        db.commit()
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Book does not exist')
+
+
+# * Below are endpoints for comments
+
+
+@app.post("/comments/", status_code=status.HTTP_200_OK)
+async def add_comment(comment: CommentsBase, db: db_dependency):
+    comment_dump = comment.model_dump()
+    db.add(**comment_dump)
+    db.commit()
     
     
