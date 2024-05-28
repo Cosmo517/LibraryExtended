@@ -24,16 +24,10 @@ class Books(Base):
 # Creating reading list table
 class Reading_List(Base):
     __tablename__= 'reading_list'
-    index = Column(Integer, primary_key=True, index=True)
-    isbn = Column(String(14), ForeignKey('books.isbn'), nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
     username = Column(String(25), ForeignKey('users.username'), nullable=False)
+    isbn = Column(String(14), ForeignKey('books.isbn'), nullable=False)
     folder = Column(String(50), nullable=False)
-
-# Creating book to list tabe
-class Book_to_List(Base):
-    __tablename__= 'book _to_list'
-    list_index = Column(Integer, ForeignKey('reading_list.index'), primary_key=True, index=True)
-    isbn = Column(String(14), ForeignKey('books.isbn'), primary_key=True, index=True)
 
 # Creating comments table
 class Comments(Base):

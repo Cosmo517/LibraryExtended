@@ -41,15 +41,10 @@ class BooksBase(BaseModel):
 
 # Unused at the moment
 class Reading_ListBase(BaseModel):
-    index: int
-    isbn: str
+    id: int
     username: str
-    folder: str
-
-# Unused at the moment
-class Book_to_ListBase(BaseModel):
-    list_index: int
     isbn: str
+    folder: str
 
 # This is the data that the frontend needs to pass
 # when a user creates a comment
@@ -179,6 +174,8 @@ async def get_book(book_isbn: str, db: db_dependency):
     return book
 
 
+# TODO: need to add the deletion of comments that are on that isbn
+# TODO: need to add the deletion of the book within a users reading list
 @app.delete('/book/{book_isbn}', status_code=status.HTTP_200_OK)
 async def remove_book(book_isbn: str, db: db_dependency):
     db_check_book = db.query(models.Books).filter(models.Books.isbn == book_isbn)
@@ -197,5 +194,5 @@ async def add_comment(comment: CommentsBase, db: db_dependency):
     comment_dump = comment.model_dump()
     db.add(**comment_dump)
     db.commit()
-    
-    
+
+
