@@ -24,7 +24,7 @@ class Books(Base):
 # Creating reading list table
 class Reading_List(Base):
     __tablename__= 'reading_list'
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     username = Column(String(25), ForeignKey('users.username'), nullable=False)
     isbn = Column(String(14), ForeignKey('books.isbn'), nullable=False)
     folder = Column(String(50), nullable=False)
@@ -32,7 +32,7 @@ class Reading_List(Base):
 # Creating comments table
 class Comments(Base):
     __tablename__= 'comments'
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     book_isbn = Column(String(14), ForeignKey('books.isbn'), nullable=False)
     username = Column(String(25), ForeignKey('users.username'), nullable=False)
     content = Column(String(1000), nullable=False)
@@ -41,7 +41,7 @@ class Comments(Base):
 # Creating rating table
 class Rating(Base):
     __tablename__= 'rating'
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     book_isbn = Column(String(14), ForeignKey('books.isbn'), nullable=False)
     username = Column(String(25), ForeignKey('users.username'), nullable=False)
     rating =  Column(Integer, nullable=False)

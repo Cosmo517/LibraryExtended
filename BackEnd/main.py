@@ -7,6 +7,7 @@ import models
 from fastapi.middleware.cors import CORSMiddleware
 import hashlib
 from authentication import *
+from sqlalchemy import delete
 
 app = FastAPI()
 
@@ -41,7 +42,6 @@ class BooksBase(BaseModel):
 
 # Unused at the moment
 class Reading_ListBase(BaseModel):
-    id: int
     username: str
     isbn: str
     folder: str
@@ -82,6 +82,8 @@ models.Base.metadata.create_all(bind=engine)
 
 
 # * -- Helper functions for endpoints -- * #
+
+
 def hash_password(password: str):
     """Hashes a given password using SHA256
 
@@ -180,13 +182,28 @@ async def get_book(book_isbn: str, db: db_dependency):
 async def remove_book(book_isbn: str, db: db_dependency):
     db_check_book = db.query(models.Books).filter(models.Books.isbn == book_isbn)
     if db_check_book:
+        # delete the comments
+        comments_for_book = db.query(models.Comments).filter(models.comments_for_book.book_isbn == book_isbn).all()
+        
+        for comment in comments_for_book:
+            db.delete(comment)
+        db.commit()
+        
+        # delete the book from reading list
+        books_in_reading_list = db.query(models.Reading_List).filter(models.Reading_List.isbn == book_isbn).all()
+        
+        for book in books_in_reading_list:
+            db.delete(book)
+        db.commit()
+        
+        # delete the book
         db_check_book = db.query(models.Books).filter(models.Books.isbn == book_isbn).delete()
         db.commit()
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Book does not exist')
 
 
-# * Below are endpoints for comments
+# * -- Below are endpoints for comments -- * #
 
 
 @app.post("/comments/", status_code=status.HTTP_200_OK)
@@ -196,3 +213,8 @@ async def add_comment(comment: CommentsBase, db: db_dependency):
     db.commit()
 
 
+# * -- Below are endpoints for user reading lists -- * #
+
+@app.post("/reading_list/", status_code=status.HTTP_200_OK)
+async def add_to_reading_list(book: Reading_ListBase, db: db_dependency):
+    pass
