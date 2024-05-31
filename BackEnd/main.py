@@ -7,7 +7,7 @@ import models
 from fastapi.middleware.cors import CORSMiddleware
 import hashlib
 from authentication import *
-from sqlalchemy import delete
+from sqlalchemy import func
 
 app = FastAPI()
 
@@ -130,6 +130,10 @@ async def create_user(user: UserBase, db: db_dependency):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='User already exists')
 
 
+# Delete a users account
+# TODO: Create a delete account endpoint
+
+
 # Get information about a user
 @app.get("/user/{username}" , status_code=status.HTTP_200_OK)
 async def read_user(username: str, db:db_dependency):
@@ -150,9 +154,13 @@ async def login(user: LoginBase, db: db_dependency):
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Username or password is incorrect')
 
 
+# Refresh a users login token
+# TODO: Create a function to refresh a users login token
+
+
 # *  -- Below are endpoints dealing with books -- * #
 
-
+# Create a new book record
 @app.post("/book/", status_code=status.HTTP_200_OK)
 async def create_book(book: BooksBase, db: db_dependency):
     book_dump = book.model_dump()
@@ -163,30 +171,35 @@ async def create_book(book: BooksBase, db: db_dependency):
     else:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Book already exists')
 
-
+# Get book information from the database
 @app.get("/books/", status_code=status.HTTP_200_OK)
 async def get_books(skip: int, limit: int, db: db_dependency):
     books = db.query(models.Books).order_by(models.Books.title).offset(skip).limit(limit).all()
     return books
 
-
+# Get information about a certain book
 @app.get('/book/{book_isbn}', status_code=status.HTTP_200_OK)
 async def get_book(book_isbn: str, db: db_dependency):
     book = db.query(models.Books).filter(models.Books.isbn == book_isbn).first()
     return book
 
-
-# TODO: need to add the deletion of comments that are on that isbn
-# TODO: need to add the deletion of the book within a users reading list
+# Delete a book record based on the isbn as well as comments, ratings, etc
 @app.delete('/book/{book_isbn}', status_code=status.HTTP_200_OK)
 async def remove_book(book_isbn: str, db: db_dependency):
     db_check_book = db.query(models.Books).filter(models.Books.isbn == book_isbn)
     if db_check_book:
         # delete the comments
-        comments_for_book = db.query(models.Comments).filter(models.comments_for_book.book_isbn == book_isbn).all()
+        comments_for_book = db.query(models.Comments).filter(models.Comments.book_isbn == book_isbn).all()
         
         for comment in comments_for_book:
             db.delete(comment)
+        db.commit()
+        
+        # delete the ratings
+        ratings_for_book = db.query(models.Rating).filter(models.Rating.book_isbn == book_isbn).all()
+        
+        for rating in ratings_for_book:
+            db.delete(rating)
         db.commit()
         
         # delete the book from reading list
@@ -205,16 +218,63 @@ async def remove_book(book_isbn: str, db: db_dependency):
 
 # * -- Below are endpoints for comments -- * #
 
-
+# Create comments
 @app.post("/comments/", status_code=status.HTTP_200_OK)
 async def add_comment(comment: CommentsBase, db: db_dependency):
     comment_dump = comment.model_dump()
-    db.add(**comment_dump)
+    db.add(models.Comments(**comment_dump))
     db.commit()
 
 
+# Delete comments
+# TODO: Check to see if delete_comment works
+@app.delete("/comments/{id}", status_code=status.HTTP_200_OK)
+async def delete_comment(id: int, db: db_dependency):
+    db_delete_comment = db.query(models.Comments).filter(models.Comments.id == id).delete()
+    db.commit()
+
 # * -- Below are endpoints for user reading lists -- * #
 
+
+# TODO: maybe make it so only 1 folder of the same name can be created?
+# FIXME: Fix isbn foreign key error (i.e. isbn doesnt exist)
+# FIXME: Fix username foreign key error (i.e. username does not exist)
 @app.post("/reading_list/", status_code=status.HTTP_200_OK)
 async def add_to_reading_list(book: Reading_ListBase, db: db_dependency):
+    reading_list_dump = book.model_dump()
+    db.add(models.Reading_List(**reading_list_dump))
+    db.commit()
+
+
+# Remove a book from a reading list
+# TODO: Create a function to remove a book from someones reading list
+@app.delete("/reading_list/", status_code=status.HTTP_200_OK)
+async def remove_from_reading_list(book: Reading_ListBase, db: db_dependency):
     pass
+
+
+# * -- Below are endpoints for ratings -- * #
+
+# TODO: Add a check so a user can only leave one rating
+# FIXME: Fix isbn foreign key error (i.e. isbn doesnt exist)
+# FIXME: Fix username foreign key error (i.e. username does not exist)
+@app.post("/ratings/", status_code=status.HTTP_200_OK)
+async def add_rating(rating: RatingBase, db: db_dependency):
+    rating_dump = rating.model_dump()
+    db.add(models.Rating(**rating_dump))
+    db.commit()
+
+
+# FIXME: Error when doing None / int... check to make sure there is a rating for the book first...
+@app.get("/ratings/{book_isbn}", status_code=status.HTTP_200_OK)
+async def average_ratings(book_isbn: str, db: db_dependency):
+    rating_total = db.query(func.sum(models.Rating.book_isbn)).filter(models.Rating.book_isbn == book_isbn).scalar()
+    amount_of_ratings = db.query(models.Rating).filter(models.Rating.book_isbn == book_isbn).count()
+    average_rating = rating_total / amount_of_ratings
+    return {'rating' : rating_total, 'votes' : amount_of_ratings, 'average' : average_rating}
+
+
+# * -- Below are endpoints for searching and filtering -- * #
+
+
+# TODO: Add search and filter options for books
