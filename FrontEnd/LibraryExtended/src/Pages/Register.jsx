@@ -4,6 +4,7 @@ import api from '../api'
 export const Register = () => {
     const [username, setUsername] = useState ('');
     const [password, setPassword] = useState ('');
+    const [checkPassword, setCheckPassword] = useState('');
     const [email, setEmail] = useState('');
     const [admin, setAdmin] = useState (0);
 
@@ -11,6 +12,7 @@ export const Register = () => {
         const {name, value} = event.target;
         if(name==='username') setUsername(value);
         else if (name==='password') setPassword(value);
+        else if (name==='checkPassword') setCheckPassword(value);
         else if (name==='email') setEmail(value);
         else if (name==='admin') setAdmin(perseInt(value,10));
     };
@@ -30,6 +32,7 @@ export const Register = () => {
                 username.trim()===''||
                 username.length>25 ||
                 password.length<10 ||
+                password !== checkPassword||
                 !validateEmail(email)
             ) {
                 if(username.trim()===''){
@@ -44,6 +47,9 @@ export const Register = () => {
                 else if (password.length < 10){
                     displayMessage('Password must be 10 character or longer');
                 }
+                else if (password !== checkPassword){
+                    displayMessage ('Passwords do not match')
+                }
             }
             else{
                 const response = await api.post('/users/',{
@@ -55,6 +61,7 @@ export const Register = () => {
                 if (repsponse.data.reponse==='Success'){
                     setUsername('');
                     setPassword('');
+                    setCheckPassword('');
                     setEmail('');
                     setAdmin(0);
                     displayMessage('Account has been created successfully');
