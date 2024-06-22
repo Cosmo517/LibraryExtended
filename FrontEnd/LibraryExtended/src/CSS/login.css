@@ -73,9 +73,9 @@ body{
     background: transparent;
     border: none;
     outline: none;
-    font-size: 0.7em;
-    color:black;
-    font-weight:600;
+    font-size: 0.5em;
+    color:rgb(255, 255, 255);
+    font-weight:400;
     padding:0 35px 0 5px;
 
 }
