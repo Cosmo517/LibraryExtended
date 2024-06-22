@@ -131,12 +131,18 @@ async def create_user(user: UserBase, db: db_dependency):
 
 
 # Delete a users account
-# TODO: Create a delete account endpoint
-
+@app.delete("/user/{username}", status_code=status.HTTP_200_OK)
+async def delete_user(username: str, db: db_dependency):
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+    else:
+        db.delete(user)
+        db.commit()
 
 # Get information about a user
 @app.get("/user/{username}" , status_code=status.HTTP_200_OK)
-async def read_user(username: str, db:db_dependency):
+async def read_user(username: str, db: db_dependency):
     user = db.query(models.User).filter(models.User.username == username).first()
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
@@ -227,10 +233,10 @@ async def add_comment(comment: CommentsBase, db: db_dependency):
 
 
 # Delete comments
-# TODO: Check to see if delete_comment works
 @app.delete("/comments/{id}", status_code=status.HTTP_200_OK)
 async def delete_comment(id: int, db: db_dependency):
-    db_delete_comment = db.query(models.Comments).filter(models.Comments.id == id).delete()
+    db_delete_comment = db.query(models.Comments).filter(models.Comments.id == id)
+    db.delete(db_delete_comment)
     db.commit()
 
 # * -- Below are endpoints for user reading lists -- * #
@@ -255,13 +261,19 @@ async def remove_from_reading_list(book: Reading_ListBase, db: db_dependency):
 
 # * -- Below are endpoints for ratings -- * #
 
-# TODO: check tomake sure a user can only leave one rating
-# FIXME: Fix isbn foreign key error (i.e. isbn doesnt exist)
-# FIXME: Fix username foreign key error (i.e. username does not exist)
 @app.post("/ratings/", status_code=status.HTTP_200_OK)
 async def add_rating(rating: RatingBase, db: db_dependency):
     rating_dump = rating.model_dump()
-    already_rated = db.query(models.Rating).filter(models.Rating.username == rating_dump['username']).filter(models.Rating.book_isbn == rating_dump['book_isbn'])
+    
+    user_exists = db.query(models.User).filter(models.User.username == rating_dump['username']).first()
+    if not user_exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User does not exist')
+    
+    book_exists = db.query(models.Books).filter(models.Books.isbn == rating_dump['book_isbn']).first()
+    if not book_exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Book does not exist')
+    
+    already_rated = db.query(models.Rating).filter(models.Rating.username == rating_dump['username']).filter(models.Rating.book_isbn == rating_dump['book_isbn']).first()
     if not already_rated:
         db.add(models.Rating(**rating_dump))
         db.commit()
@@ -269,10 +281,11 @@ async def add_rating(rating: RatingBase, db: db_dependency):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='User already rated this book')
 
 
-# FIXME: Error when doing None / int... check to make sure there is a rating for the book first...
 @app.get("/ratings/{book_isbn}", status_code=status.HTTP_200_OK)
 async def average_ratings(book_isbn: str, db: db_dependency):
     rating_total = db.query(func.sum(models.Rating.book_isbn)).filter(models.Rating.book_isbn == book_isbn).scalar()
+    if rating_total is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='No ratings exist for this book')
     amount_of_ratings = db.query(models.Rating).filter(models.Rating.book_isbn == book_isbn).count()
     average_rating = rating_total / amount_of_ratings
     return {'rating' : rating_total, 'votes' : amount_of_ratings, 'average' : average_rating}
