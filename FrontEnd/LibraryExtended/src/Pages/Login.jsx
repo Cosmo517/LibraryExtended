@@ -15,9 +15,9 @@ export const Login = () => {
 
     const handleFormSubmit = async (event) => {
         event.preventDefault();
-        // grab the info element for error messages
+
         let info = document.getElementById('info')
-        // create a signed JWT on user login
+
         let signed_response = await api.post('/login/', formData)
         setFormData({
             username: '',
@@ -36,53 +36,13 @@ export const Login = () => {
         }
     };
 
-
-/*export const Login = () => {
-    const[formData, setFormData] = useState({
-        username: '',
-        password: '',
-    })
-
-    const handleFormSubmit = async (event) => {
-        event.preventDefault();
-        const info = document.getElementById('info');
-
-        try{
-            const signed_response = await api.post('/login/', formData);
-            const token = signed_response.data.token;
-
-            if (token) {
-                Cookies.set('token', token)
-                window.location.href = '/';
-            }
-            else{
-                info.innerHTML = 'Invalid username or password';
-            }
-
-            setFormData({username: '', password: ' '});
-        } 
-        catch(error){
-            info.innerHTML = 'Error while logging in';
-            console.error('Login Error:', error);
-        }
-
-    };*/
     const handleInputChange = (event) => {
         const value = event.target.value
         setFormData({
             ...formData,
             [event.target.name]: value,
         });
-        console.log("TEST")
     };
-    //const handleInputChange = (event) => {
-       // const{ name, value } = event.target;
-        //setFormData((prevFormData) => ({
-         //   ...prevFormData,
-            //[name]: value,
-       // }));
-   // };
-
     return (
 
         <div className='wrap'>
@@ -94,7 +54,6 @@ export const Login = () => {
                     <div className="input-box">
                         <span className="icon"><ion-icon name="person"></ion-icon> </span>
                         <input 
-                            className='form-control'
                             type='text'
                             name='username'
                             id='username'
@@ -102,12 +61,11 @@ export const Login = () => {
                             onChange={handleInputChange}
                             value={formData.username}
                         />
+                        <label>Username</label>
                     </div>
-                    <label>Username</label>
                     <div className='input-box'>
                         <span className="icon"><ion-icon name="lock-closed"></ion-icon></span>
                         <input 
-                            className='form-control'
                             type='password'
                             id='password'
                             name='password'
@@ -116,9 +74,9 @@ export const Login = () => {
                             value={formData.password}
                             
                         />
+                        <label>Password</label>
                     </div>
-                    <label>Password</label>
-                    <button type = 'submit' className='bttn space-mono-bold'>Login</button>
+                    <button type = 'submit' class='bttn space-mono-bold'>Login</button>
                     <div className='account-register'>
                         <a href="/#register">Register an account</a>
                     </div>
