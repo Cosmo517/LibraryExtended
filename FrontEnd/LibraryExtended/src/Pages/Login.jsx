@@ -73,6 +73,7 @@ export const Login = () => {
             ...formData,
             [event.target.name]: value,
         });
+        console.log("TEST")
     };
     //const handleInputChange = (event) => {
        // const{ name, value } = event.target;
@@ -93,8 +94,9 @@ export const Login = () => {
                     <div className="input-box">
                         <span className="icon"><ion-icon name="person"></ion-icon> </span>
                         <input 
+                            className='form-control'
                             type='text'
-                            name='Username'
+                            name='username'
                             id='username'
                             required
                             onChange={handleInputChange}
@@ -105,9 +107,10 @@ export const Login = () => {
                     <div className='input-box'>
                         <span className="icon"><ion-icon name="lock-closed"></ion-icon></span>
                         <input 
-                            type='Password'
+                            className='form-control'
+                            type='password'
                             id='password'
-                            name='Password'
+                            name='password'
                             required
                             onChange={handleInputChange}
                             value={formData.password}
@@ -115,7 +118,7 @@ export const Login = () => {
                         />
                     </div>
                     <label>Password</label>
-                    <button type = 'submit' class='bttn space-mono-bold'>Login</button>
+                    <button type = 'submit' className='bttn space-mono-bold'>Login</button>
                     <div className='account-register'>
                         <a href="/#register">Register an account</a>
                     </div>

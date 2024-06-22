@@ -255,14 +255,18 @@ async def remove_from_reading_list(book: Reading_ListBase, db: db_dependency):
 
 # * -- Below are endpoints for ratings -- * #
 
-# TODO: Add a check so a user can only leave one rating
+# TODO: check tomake sure a user can only leave one rating
 # FIXME: Fix isbn foreign key error (i.e. isbn doesnt exist)
 # FIXME: Fix username foreign key error (i.e. username does not exist)
 @app.post("/ratings/", status_code=status.HTTP_200_OK)
 async def add_rating(rating: RatingBase, db: db_dependency):
     rating_dump = rating.model_dump()
-    db.add(models.Rating(**rating_dump))
-    db.commit()
+    already_rated = db.query(models.Rating).filter(models.Rating.username == rating_dump['username']).filter(models.Rating.book_isbn == rating_dump['book_isbn'])
+    if not already_rated:
+        db.add(models.Rating(**rating_dump))
+        db.commit()
+    else:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='User already rated this book')
 
 
 # FIXME: Error when doing None / int... check to make sure there is a rating for the book first...
