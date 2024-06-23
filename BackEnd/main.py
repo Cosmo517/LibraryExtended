@@ -41,10 +41,13 @@ class BooksBase(BaseModel):
     genre: str
 
 # Unused at the moment
-class Reading_ListBase(BaseModel):
+class FoldersBase(BaseModel):
     username: str
-    isbn: str
     folder: str
+
+class FoldersToBooksBase(BaseModel):
+    folder: str
+    book_isbn: str
 
 # This is the data that the frontend needs to pass
 # when a user creates a comment
@@ -208,12 +211,12 @@ async def remove_book(book_isbn: str, db: db_dependency):
             db.delete(rating)
         db.commit()
         
-        # delete the book from reading list
-        books_in_reading_list = db.query(models.Reading_List).filter(models.Reading_List.isbn == book_isbn).all()
+        # TODO: delete the book from reading list
+        # books_in_reading_list = db.query(models.Reading_List).filter(models.Reading_List.isbn == book_isbn).all()
         
-        for book in books_in_reading_list:
-            db.delete(book)
-        db.commit()
+        # for book in books_in_reading_list:
+        #     db.delete(book)
+        # db.commit()
         
         # delete the book
         db_check_book = db.query(models.Books).filter(models.Books.isbn == book_isbn).delete()
@@ -242,21 +245,21 @@ async def delete_comment(id: int, db: db_dependency):
 # * -- Below are endpoints for user reading lists -- * #
 
 
-# TODO: maybe make it so only 1 folder of the same name can be created?
-# FIXME: Fix isbn foreign key error (i.e. isbn doesnt exist)
-# FIXME: Fix username foreign key error (i.e. username does not exist)
-@app.post("/reading_list/", status_code=status.HTTP_200_OK)
-async def add_to_reading_list(book: Reading_ListBase, db: db_dependency):
-    reading_list_dump = book.model_dump()
-    db.add(models.Reading_List(**reading_list_dump))
-    db.commit()
+# # TODO: maybe make it so only 1 folder of the same name can be created?
+# # FIXME: Fix isbn foreign key error (i.e. isbn doesnt exist)
+# # FIXME: Fix username foreign key error (i.e. username does not exist)
+# @app.post("/reading_list/", status_code=status.HTTP_200_OK)
+# async def add_to_reading_list(book: Reading_ListBase, db: db_dependency):
+#     reading_list_dump = book.model_dump()
+#     db.add(models.Reading_List(**reading_list_dump))
+#     db.commit()
 
 
-# Remove a book from a reading list
-# TODO: Create a function to remove a book from someones reading list
-@app.delete("/reading_list/", status_code=status.HTTP_200_OK)
-async def remove_from_reading_list(book: Reading_ListBase, db: db_dependency):
-    pass
+# # Remove a book from a reading list
+# # TODO: Create a function to remove a book from someones reading list
+# @app.delete("/reading_list/", status_code=status.HTTP_200_OK)
+# async def remove_from_reading_list(book: Reading_ListBase, db: db_dependency):
+#     pass
 
 
 # * -- Below are endpoints for ratings -- * #

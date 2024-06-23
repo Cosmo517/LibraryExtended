@@ -22,12 +22,16 @@ class Books(Base):
     genre = Column (String(50), nullable=False)
 
 # Creating reading list table
-class Reading_List(Base):
-    __tablename__= 'reading_list'
+class Folders(Base):
+    __tablename__= 'folders'
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     username = Column(String(25), ForeignKey('users.username'), nullable=False)
-    isbn = Column(String(14), ForeignKey('books.isbn'), nullable=False)
     folder = Column(String(50), nullable=False)
+
+class FoldersToBooks(Base):
+    __tablename__ = 'folders-to-books'
+    folder_id = Column(Integer, ForeignKey('folders.id'), primary_key=True, index=True)
+    book_isbn = Column(String(14), ForeignKey('books.isbn'), primary_key=True, index=True)
 
 # Creating comments table
 class Comments(Base):
