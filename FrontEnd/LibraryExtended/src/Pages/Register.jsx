@@ -1,5 +1,6 @@
 import React, {useState} from 'react'
 import api from '../api'
+import '../CSS/register.css';
 
 export const Register = () => {
     const [username, setUsername] = useState ('');
@@ -25,6 +26,7 @@ export const Register = () => {
     const displayMessage = (message) => {
         document.getElementById('info').innerHTML= message;
     };
+    
     const handleFormSubmit = async(event) => {
         event.preventDefault();
         try{
@@ -78,5 +80,73 @@ export const Register = () => {
             displayMessage('Error');
         }
     };
-}
 
+    return(
+
+        <div className='wrap-register'>
+            <div className={'register-form-box space-mono-bold'}>
+                <h3>
+                    Register
+                </h3>
+                <form onSubmit= {handleFormSubmit}>
+                    <div className="input-box-register">
+                        <span className="icon"><ion-icon name="mail"></ion-icon></span>
+                        <input 
+                            type='email'
+                            name='email'
+                            id='email'
+                            required
+                            onChange={handleInputChange}
+                            value={email}
+                        />
+                        <label>Email</label>
+                    </div>
+                    <div className="input-box-register">
+                        <span className="icon"><ion-icon name="person"></ion-icon> </span>
+                        <input 
+                            type='text'
+                            name='username'
+                            id='username'
+                            required
+                            onChange={handleInputChange}
+                            value={username}
+                        />
+                        <label>Username</label>
+                    </div>
+                    <div className="input-box-register">
+                        <span className="icon"><ion-icon name="lock-closed"></ion-icon></span>
+                        <input 
+                            type='password'
+                            id='password'
+                            name='password'
+                            required
+                            onChange={handleInputChange}
+                            value={password}
+                            
+                        />
+                        <label>Password</label>
+                    </div>
+                    <div className="input-box-register">
+                        <span className="icon"><ion-icon name="lock-closed"></ion-icon></span>
+                        <input 
+                            type='password'
+                            id='checkPassword'
+                            name='checkPassword'
+                            required
+                            onChange={handleInputChange}
+                            value={checkPassword}
+                            
+                        />
+                        <label>Retype Password</label>
+                    </div>
+                    <button type = 'submit' class='bttn-register space-mono-bold'>Register</button>
+                    <div className='account-login'><p>Already have an account? </p>
+                        <a href="/#login"> Login</a>
+                    </div>
+                    <div id="info"></div>
+                </form>
+            </div>
+        </div>
+    )
+};
+export default Register;
