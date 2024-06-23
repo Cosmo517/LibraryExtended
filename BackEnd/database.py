@@ -5,10 +5,10 @@ import configparser
 import os.path
 
 config_file = None
-if (os.path.isfile('dev.cfg')):
-    config_file = 'dev.cfg'
+if (os.path.isfile('../config/dev.cfg')):
+    config_file = '../config/dev.cfg'
 else:
-    config_file = 'settings.cfg'
+    config_file = '../config/settings.cfg'
 
 # read from the configuration file
 config = configparser.ConfigParser()

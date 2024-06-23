@@ -1,10 +1,10 @@
 import time, os, configparser, jwt
 
 config_file = None
-if (os.path.isfile('dev.cfg')):
-    config_file = 'dev.cfg'
+if (os.path.isfile('../config/dev.cfg')):
+    config_file = '../config/dev.cfg'
 else:
-    config_file = 'settings.cfg'
+    config_file = '../config/settings.cfg'
     
 # read the data from the config file
 config = configparser.ConfigParser()
