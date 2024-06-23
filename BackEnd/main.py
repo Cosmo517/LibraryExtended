@@ -253,11 +253,20 @@ async def add_to_reading_list(book: Reading_ListBase, db: db_dependency):
 
 
 # Remove a book from a reading list
-# TODO: Create a function to remove a book from someones reading list
+# TODO: Test to make sure this endpoint works
 @app.delete("/reading_list/", status_code=status.HTTP_200_OK)
 async def remove_from_reading_list(book: Reading_ListBase, db: db_dependency):
-    pass
-
+    book_dump = book.model_dump()
+    book_in_reading_list = db.query(models.Reading_List).filter(
+        models.Reading_List.isbn == book_dump['isbn']).filter(
+        models.Reading_List.username == book_dump['username']).filter(
+        models.Reading_List.folder == book_dump['folder']).first()
+    
+    if not book_in_reading_list:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Book not found in reading list')
+    else:
+        db.delete(book_in_reading_list)
+        db.commit()
 
 # * -- Below are endpoints for ratings -- * #
 
@@ -291,7 +300,5 @@ async def average_ratings(book_isbn: str, db: db_dependency):
     return {'rating' : rating_total, 'votes' : amount_of_ratings, 'average' : average_rating}
 
 
-# * -- Below are endpoints for searching and filtering -- * #
+# * -- ADMIN ANALYTICS AND INFO -- * #
 
-
-# TODO: Add search and filter options for books
