@@ -76,7 +76,7 @@ export const Login = () => {
                         />
                         <label>Password</label>
                     </div>
-                    <button type = 'submit' class='bttn space-mono-bold'>Login</button>
+                    <button type = 'submit' className='bttn space-mono-bold'>Login</button>
                     <div className='account-register'>
                         <a href="/#register">Register an account</a>
                     </div>

@@ -139,7 +139,7 @@ export const Register = () => {
                         />
                         <label>Retype Password</label>
                     </div>
-                    <button type = 'submit' class='bttn-register space-mono-bold'>Register</button>
+                    <button type = 'submit' className='bttn-register space-mono-bold'>Register</button>
                     <div className='account-login'><p>Already have an account? </p>
                         <a href="/#login"> Login</a>
                     </div>
