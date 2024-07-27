@@ -1,13 +1,13 @@
 from fastapi import FastAPI, HTTPException, Depends, status
 from typing import Annotated
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
 from database import SessionLocal, engine
 import models
 from fastapi.middleware.cors import CORSMiddleware
 import hashlib
 from authentication import *
 from sqlalchemy import func
+from data_types import *
 
 app = FastAPI()
 
@@ -19,62 +19,6 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins = origins,
 )
-
-# This is the data that the frontend should pass when a user
-# creates an account
-class UserBase(BaseModel):
-    username: str
-    email: str
-    password: str
-    admin: int
-    date_created: float 
-
-# This is the data that the frontend should pass when
-# a book is being added to the database
-class BooksBase(BaseModel):
-    isbn: str
-    title: str
-    author: str
-    publisher: str
-    page_count: int
-    year_published: int
-    genre: str
-
-# Unused at the moment
-class FoldersBase(BaseModel):
-    username: str
-    folder: str
-
-class FoldersToBooksBase(BaseModel):
-    folder: str
-    book_isbn: str
-    
-    
-class AddFolderToBook(BaseModel):
-    username: str
-    folder: str
-    book_isbn: str
-
-# This is the data that the frontend needs to pass
-# when a user creates a comment
-class CommentsBase(BaseModel):
-    book_isbn: str
-    username: str
-    content: str
-    time_stamp: float
-
-# This is the data that the frontend needs to pass
-# when a user leaves a rating
-class RatingBase(BaseModel):
-    book_isbn: str
-    username: str
-    rating: int
-
-# This is the data that the frontend needs to pass
-# when a user tries to login
-class LoginBase(BaseModel):
-    username: str
-    password: str
 
 # No matter what this will always close our database since we dont want to keep our databases open for too long
 def get_db():
@@ -121,7 +65,7 @@ def compare_passwords(login_password: str, database_password: str):
 
 # A simple boolean to check if a user exists or not.
 def user_exists(username: str, db: db_dependency):
-    return db.query(models.User).filter(models.User.username == username).first()
+    return db.query(models.Users).filter(models.Users.username == username).first()
 
 
 # * -- Below are endpoints related to users, such as signing in, registration,      -- * #
@@ -134,7 +78,7 @@ async def create_user(user: UserBase, db: db_dependency):
     db_user = user.model_dump()
     if not user_exists(db_user['username'], db):
         db_user['password'] = hash_password(db_user['password'])
-        db.add(models.User(**db_user))
+        db.add(models.Users(**db_user))
         db.commit()
     else:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='User already exists')
@@ -143,7 +87,7 @@ async def create_user(user: UserBase, db: db_dependency):
 # Delete a users account
 @app.delete("/user/{username}", status_code=status.HTTP_200_OK)
 async def delete_user(username: str, db: db_dependency):
-    user = db.query(models.User).filter(models.User.username == username).first()
+    user = db.query(models.Users).filter(models.Users.username == username).first()
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
     else:
@@ -154,7 +98,7 @@ async def delete_user(username: str, db: db_dependency):
 # Get information about a user
 @app.get("/user/{username}" , status_code=status.HTTP_200_OK)
 async def read_user(username: str, db: db_dependency):
-    user = db.query(models.User).filter(models.User.username == username).first()
+    user = db.query(models.Users).filter(models.Users.username == username).first()
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
     return user
@@ -164,7 +108,7 @@ async def read_user(username: str, db: db_dependency):
 @app.get("/users/login/", status_code=status.HTTP_200_OK)
 async def login(user: LoginBase, db: db_dependency):
     db_user = user.model_dump()
-    db_user_search = db.query(models.User).filter(models.User.username == db_user['username']).first()
+    db_user_search = db.query(models.Users).filter(models.Users.username == db_user['username']).first()
     if db_user_search:
         if compare_passwords(db_user['password'], db_user_search['password']):
             return sign_jwt(db_user['username'], db_user_search['admin'])
@@ -172,8 +116,10 @@ async def login(user: LoginBase, db: db_dependency):
 
 
 # Refresh a users login token
-# TODO: Create a function to refresh a users login token
-
+# TODO: Make sure refresh_token works
+@app.get("/users/token/refresh/{token}", status_code=status.HTTP_200_OK)
+async def refresh_token(token: str):
+    return refresh_jwt(token)
 
 # *  -- Below are endpoints dealing with books -- * #
 
@@ -204,7 +150,7 @@ async def get_book(book_isbn: str, db: db_dependency):
     return book
 
 
-# TODO: Check to make sure this endpoint works
+# TODO: Check to make sure remove_book endpoint works
 # Delete a book record based on the isbn as well as comments, ratings, etc
 @app.delete('/book/{book_isbn}', status_code=status.HTTP_200_OK)
 async def remove_book(book_isbn: str, db: db_dependency):
@@ -218,7 +164,7 @@ async def remove_book(book_isbn: str, db: db_dependency):
         db.commit()
         
         # delete the ratings
-        ratings_for_book = db.query(models.Rating).filter(models.Rating.book_isbn == book_isbn).all()
+        ratings_for_book = db.query(models.Ratings).filter(models.Ratings.book_isbn == book_isbn).all()
         
         for rating in ratings_for_book:
             db.delete(rating)
@@ -292,7 +238,7 @@ async def delete_folder(folder: FoldersBase, db: db_dependency):
 
 @app.get('/folder/get/{username}', status_code=status.HTTP_200_OK)
 async def get_user_folders(username: str, db: db_dependency):
-    user_exists = db.query(models.User).filter(models.User.username == username).first()
+    user_exists = db.query(models.Users).filter(models.Users.username == username).first()
     if not user_exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User does not exist')
     all_folders = db.query(models.Folders).filter(models.Folders.username == username).all()
@@ -304,7 +250,7 @@ async def add_book_to_folder(book: AddFolderToBook, db: db_dependency):
     book_info = book.model_dump()
     
     # Make sure the user exists
-    user_exists = db.query(models.User).filter(models.User.username == book_info['username']).first()
+    user_exists = db.query(models.Users).filter(models.Users.username == book_info['username']).first()
     if not user_exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User does not exist')
     
@@ -324,16 +270,35 @@ async def add_book_to_folder(book: AddFolderToBook, db: db_dependency):
     db.commit()
 
 
-# TODO: Implement remove_book_from_folder
+# TODO: Check to make sure remove_book_from_folder works
 @app.delete('/folder/book/delete/', status_code=status.HTTP_200_OK)
-async def remove_book_from_folder(book, db: db_dependency):
-    pass
+async def remove_book_from_folder(book: RemoveFolderToBook, db: db_dependency):
+    user_exists = db.query(models.Users).filter(models.Users.username == book.username).first()
+    
+    # Make sure the user exists
+    if not user_exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User does not exist')
+    
+    folder_to_search = db.query(models.Folders).filter(
+        models.Folders.id == book.folder_id).filter(
+        models.Folders.username == book.username).first()
+    
+    if not folder_to_search:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Folder does not exist')
+    
+    book_in_folder = db.query(models.FoldersToBooks.folder_id == book.folder_id).filter(
+        models.FoldersToBooks.book_isbn == book.book_isbn).first()
+    
+    if not book_in_folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book does not exist in the selected folder")
+    
+    db.delete(book_in_folder)
 
 
-# TODO: Add error detection
+# TODO: Make sure get_all_books_in_folder works
 @app.get('/folder/book/get/{folder}/{username}', status_code=status.HTTP_200_OK)
 async def get_all_books_in_folder(username: str, folder: str, db: db_dependency):
-    user_exists = db.query(models.User).filter(models.User.username == username).first()
+    user_exists = db.query(models.Users).filter(models.Users.username == username).first()
     
     # Make sure the user exists
     if not user_exists:
@@ -352,11 +317,44 @@ async def get_all_books_in_folder(username: str, folder: str, db: db_dependency)
     return books
 
 
-# TODO: Implement move_book
+# TODO: Check to make sure move_book works
 @app.post('/folder/book/move/', status_code=status.HTTP_200_OK)
-async def move_book(book, db: db_dependency):
-    pass
-
+async def move_book(bookToFolder: MoveBookFolder, db: db_dependency):
+    user_exists = db.query(models.Users).filter(models.Users.username == bookToFolder.username).first()
+    
+    # Make sure the user exists
+    if not user_exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User does not exist')
+    
+    # Make sure both folders exist
+    from_folder = db.query(models.Folders).filter(models.Folders.id == bookToFolder.from_folder_id).first()
+    to_folder = db.query(models.Folders).filter(models.Folders.id == bookToFolder.to_folder_id).first()
+    
+    if not from_folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='The folder you are trying to move from does not exist')
+    
+    if not to_folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='The folder you are trying to move to does not exist')
+    
+    # Make sure the book exists, and it exists within the folder we are trying to move from
+    book_exists = db.query(models.Books).filter(models.Books.isbn == bookToFolder.isbn).first()
+    
+    if not book_exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='The book you are trying to move does not exist')
+    
+    book_from_folder_exists = db.query(models.FoldersToBooks).filter(
+        models.FoldersToBooks.book_isbn == bookToFolder.isbn).filter(
+            models.FoldersToBooks.folder_id == bookToFolder.from_folder_id)
+    
+    if not book_from_folder_exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='The book does not exist in the current folder')
+    
+    # We can now move the book
+    db.add(models.FoldersToBooks({"folder_id": bookToFolder.to_folder_id, "book_isbn": bookToFolder.isbn}))
+    db.commit()
+    
+    db.delete(models.FoldersToBooks({"folder_id": bookToFolder.from_folder_id, "book_isbn": bookToFolder.isbn}))
+    db.commit()
 
 # * -- Below are endpoints for ratings -- * #
 
@@ -365,7 +363,7 @@ async def move_book(book, db: db_dependency):
 async def add_rating(rating: RatingBase, db: db_dependency):
     rating_dump = rating.model_dump()
     
-    user_exists = db.query(models.User).filter(models.User.username == rating_dump['username']).first()
+    user_exists = db.query(models.Users).filter(models.Users.username == rating_dump['username']).first()
     if not user_exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User does not exist')
     
@@ -373,9 +371,9 @@ async def add_rating(rating: RatingBase, db: db_dependency):
     if not book_exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Book does not exist')
     
-    already_rated = db.query(models.Rating).filter(models.Rating.username == rating_dump['username']).filter(models.Rating.book_isbn == rating_dump['book_isbn']).first()
+    already_rated = db.query(models.Ratings).filter(models.Ratings.username == rating_dump['username']).filter(models.Ratings.book_isbn == rating_dump['book_isbn']).first()
     if not already_rated:
-        db.add(models.Rating(**rating_dump))
+        db.add(models.Ratings(**rating_dump))
         db.commit()
     else:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='User already rated this book')
@@ -383,10 +381,10 @@ async def add_rating(rating: RatingBase, db: db_dependency):
 
 @app.get("/ratings/{book_isbn}", status_code=status.HTTP_200_OK)
 async def average_ratings(book_isbn: str, db: db_dependency):
-    rating_total = db.query(func.sum(models.Rating.book_isbn)).filter(models.Rating.book_isbn == book_isbn).scalar()
+    rating_total = db.query(func.sum(models.Ratings.book_isbn)).filter(models.Ratings.book_isbn == book_isbn).scalar()
     if rating_total is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='No ratings exist for this book')
-    amount_of_ratings = db.query(models.Rating).filter(models.Rating.book_isbn == book_isbn).count()
+    amount_of_ratings = db.query(models.Ratings).filter(models.Ratings.book_isbn == book_isbn).count()
     average_rating = rating_total / amount_of_ratings
     return {'rating' : rating_total, 'votes' : amount_of_ratings, 'average' : average_rating}
 

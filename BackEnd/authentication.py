@@ -51,3 +51,19 @@ def decode_jwt(token: str):
         return decoded_token if decoded_token['expire'] >= time.time() else {} # expired token
     except:
         return None
+
+def refresh_jwt(token: str):
+    """Decodes a JWT token to determine if the expire time can be refreshed
+
+    Args:
+        token (str): The token to decode
+
+    Returns:
+        dict or None: A signed JWT token payload {'token': token}, an empty dict if the token is expired, or None if an error occurs 
+    """
+    try:
+        decoded_token = jwt.decode(token, JWT_secret, JWT_algorithm)
+        return sign_jwt(decoded_token["username"], decoded_token["administrator"]) if decoded_token["expire"] >= time.time() else {}
+    except:
+        return None
+        
